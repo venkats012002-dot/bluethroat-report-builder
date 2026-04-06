@@ -7,13 +7,12 @@ module.exports = async (req, res) => {
   const { previewHtml, previewCss } = req.body || {};
   if (!previewHtml) return res.status(400).send('No HTML provided');
 
-  // Images are already base64 inlined by the client
   const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: white; display: flex; flex-direction: column; align-items: center; }
     ${previewCss || ''}
@@ -32,11 +31,10 @@ module.exports = async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.goto('data:text/html;charset=utf-8,' + encodeURIComponent(fullHtml), {
-      waitUntil: 'load',
-      timeout: 30000
-    });
-    await new Promise(r => setTimeout(r, 2000));
+
+    // Use setContent instead of data URI to avoid URL length limits
+    await page.setContent(fullHtml, { waitUntil: 'load', timeout: 50000 });
+    await new Promise(r => setTimeout(r, 3000));
 
     const pdf = await page.pdf({
       width: '595px',
@@ -45,7 +43,6 @@ module.exports = async (req, res) => {
       margin: { top: 0, right: 0, bottom: 0, left: 0 }
     });
 
-    // Send as base64 JSON to avoid binary encoding issues on serverless
     res.setHeader('Content-Type', 'application/json');
     res.json({ pdf: Buffer.from(pdf).toString('base64') });
   } catch (err) {
