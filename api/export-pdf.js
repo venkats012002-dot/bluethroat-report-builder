@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=report.pdf');
-    res.send(pdf);
+    res.end(Buffer.from(pdf));
   } catch (err) {
     console.error('PDF export error:', err);
     res.status(500).send('PDF export failed: ' + err.message);
