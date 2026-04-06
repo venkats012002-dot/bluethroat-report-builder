@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bluethroat Labs — Report Builder</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #111;
+      color: #E0E0E0;
+      font-family: 'Geist Mono', monospace;
+      min-height: 100vh;
+    }
+
+    /* ===== TOP BAR ===== */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      border-bottom: 1px solid #2E2E2E;
+      background: #161616;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .topbar-logo { height: 20px; filter: invert(1); }
+
+    .topbar-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #8F8F8F;
+    }
+
+    .topbar-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border: 1px solid #2E2E2E;
+      background: transparent;
+      color: #E0E0E0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover { border-color: #555; background: #1a1a1a; }
+    .btn-primary { background: #FFFFFF; color: #111; border-color: #FFFFFF; }
+    .btn-primary:hover { background: #E0E0E0; }
+
+    /* ===== TABS ===== */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #2E2E2E;
+      background: #161616;
+    }
+
+    .tab {
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      padding: 10px 24px;
+      background: transparent;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab.active { color: #E0E0E0; border-bottom-color: #FFFFFF; }
+
+    /* ===== EDITOR VIEW ===== */
+    .editor-view {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .editor-view.hidden { display: none; }
+
+    /* H1 fixed section */
+    .editor-h1-section {
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #2E2E2E;
+    }
+
+    .editor-h1-section label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .editor-h1-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      font-family: 'Instrument Serif', serif;
+      font-size: 28px;
+      color: #F2F2F2;
+      outline: none;
+      margin-bottom: 16px;
+    }
+
+    .editor-h1-input::placeholder { color: #444; }
+
+    .severity-select {
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      background: #1a1a1a;
+      border: 1px solid #2E2E2E;
+      color: #E0E0E0;
+      padding: 6px 12px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Block list */
+    .blocks { display: flex; flex-direction: column; gap: 4px; }
+
+    .block {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      group: block;
+    }
+
+    .block-handle {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #444;
+      font-size: 12px;
+      cursor: grab;
+      flex-shrink: 0;
+      margin-top: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .block:hover .block-handle { opacity: 1; }
+
+    .block-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .block-delete {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #444;
+      font-size: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      background: none;
+      border: none;
+    }
+
+    .block:hover .block-delete { opacity: 1; }
+    .block-delete:hover { color: #C00000; }
+
+    /* Block type styles */
+    .block-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #E0E0E0;
+      font-family: 'Geist Mono', monospace;
+      resize: none;
+      overflow: hidden;
+    }
+
+    .block-input::placeholder { color: #444; }
+
+    .block-input[data-type="h2"] {
+      font-size: 18px;
+      font-weight: 600;
+      padding: 8px 0;
+    }
+
+    .block-input[data-type="h3"] {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 0;
+    }
+
+    .block-input[data-type="text"] {
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.8;
+      padding: 4px 0;
+    }
+
+    .block-input[data-type="list"] {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 0;
+    }
+
+    .block-input[data-type="list-light"] {
+      font-size: 12px;
+      font-weight: 500;
+      color: #999;
+      padding: 4px 0;
+    }
+
+    .block-input[data-type="list-text"] {
+      font-size: 12px;
+      font-weight: 500;
+      color: #999;
+      line-height: 1.8;
+      padding: 4px 0;
+    }
+
+    .block-input[data-type="bullet"] {
+      font-size: 11px;
+      font-weight: 500;
+      color: #999;
+      padding: 2px 0 2px 16px;
+    }
+
+    .block-type-label {
+      font-size: 9px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    /* Code block editor */
+    .block-code-wrapper {
+      background: #1a1a1a;
+      border: 1px solid #2E2E2E;
+    }
+
+    .block-code-lang {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #2E2E2E;
+      color: #E0E0E0;
+      padding: 6px 12px;
+      width: 100%;
+      outline: none;
+    }
+
+    .block-code-lang::placeholder { color: #444; }
+
+    .block-code-textarea {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      background: #111;
+      color: #ccc;
+      border: none;
+      width: 100%;
+      padding: 12px;
+      outline: none;
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.6;
+    }
+
+    /* Image block */
+    .block-image-upload {
+      border: 1px dashed #2E2E2E;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      color: #555;
+      font-size: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .block-image-upload:hover { border-color: #555; }
+
+    .block-image-preview {
+      max-width: 100%;
+      display: block;
+      margin-top: 8px;
+    }
+
+    /* ===== SLASH COMMAND TOOLBAR ===== */
+    .slash-menu {
+      position: fixed;
+      background: #1a1a1a;
+      border: 1px solid #2E2E2E;
+      z-index: 50;
+      min-width: 200px;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .slash-menu.visible { display: block; }
+
+    .slash-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      color: #ccc;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .slash-menu-item:hover,
+    .slash-menu-item.selected { background: #252525; }
+
+    .slash-menu-item-icon {
+      font-size: 14px;
+      width: 20px;
+      text-align: center;
+      color: #888;
+    }
+
+    .slash-menu-item-label { flex: 1; }
+
+    .slash-menu-item-hint {
+      font-size: 10px;
+      color: #555;
+    }
+
+    /* ===== PREVIEW VIEW ===== */
+    .preview-view {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+      padding: 40px;
+      background: #333;
+    }
+
+    .preview-view.hidden { display: none; }
+
+    /* PDF page styles (reused from page1-preview) */
+    .page {
+      width: 595px;
+      height: 842px;
+      background: #FAFAFA;
+      position: relative;
+      padding: 48px;
+      padding-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page-border {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .grid-line-left,
+    .grid-line-right,
+    .grid-line-top,
+    .grid-line-bottom {
+      position: absolute;
+      background: #A9A9A9;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .grid-line-left { left: 48px; top: 0; bottom: 0; width: 1px; }
+    .grid-line-right { right: 48px; top: 0; bottom: 0; width: 1px; }
+    .grid-line-top { top: 48px; left: 0; right: 0; height: 1px; }
+    .grid-line-bottom { bottom: 48px; left: 0; right: 0; height: 1px; }
+
+    .page-number {
+      position: absolute;
+      top: 8px;
+      right: 16px;
+      font-family: 'Instrument Serif', serif;
+      font-size: 24px;
+      line-height: 32px;
+      color: #191919;
+      z-index: 5;
+    }
+
+    .cover-section {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .cover-image { width: 100%; display: block; object-fit: cover; }
+
+    .cover-accent {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      background: #C00000;
+    }
+
+    .cover-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 6px;
+      padding: 24px 28px;
+    }
+
+    .cover-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: #F2F2F2;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .cover-severity {
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: #F2F2F2;
+    }
+
+    .pdf-content {
+      padding: 32px;
+      flex: 1;
+      overflow: hidden;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .pdf-content h2 {
+      font-family: 'Geist Mono', monospace;
+      font-size: 18px;
+      font-weight: 600;
+      color: #191919;
+      margin-top: 28px;
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+
+    .pdf-content h2:first-child { margin-top: 0; }
+
+    .pdf-content h3 {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #191919;
+      line-height: 1.8;
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+
+    .pdf-content p {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: #454545;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    .pdf-content code {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      background: none;
+    }
+
+    .pdf-content ol {
+      list-style: none;
+      counter-reset: item;
+      padding-left: 0;
+      margin-bottom: 8px;
+    }
+
+    .pdf-content ol > li {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #191919;
+      line-height: 1.8;
+      margin-bottom: 4px;
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .pdf-content ol > li::before {
+      content: counter(item) ". ";
+      counter-increment: item;
+      position: absolute;
+      left: 0;
+    }
+
+    .pdf-content ol > li ul,
+    .pdf-content ul {
+      list-style: none;
+      padding-left: 8px;
+      margin-top: 2px;
+      margin-bottom: 8px;
+    }
+
+    .pdf-content ol > li ul li,
+    .pdf-content ul li {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: #454545;
+      line-height: 1.7;
+      position: relative;
+      padding-left: 12px;
+    }
+
+    .pdf-content ol > li ul li::before,
+    .pdf-content ul li::before {
+      content: "\2022";
+      position: absolute;
+      left: 0;
+      color: #454545;
+    }
+
+    .pdf-content .list-group {
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+
+    .pdf-content .list-group:first-child {
+      margin-top: 0;
+    }
+
+    .pdf-content .list-item {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #191919;
+      line-height: 1.8;
+    }
+
+    .pdf-content .list-item-light {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: #454545;
+      line-height: 1.7;
+    }
+
+    .pdf-content .list-num {
+      font-weight: 600;
+    }
+
+    .pdf-content .bullet-item {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: #454545;
+      line-height: 1.7;
+      padding-left: 16px;
+    }
+
+    .pdf-content .bullet-dot {
+      color: #454545;
+    }
+
+    .pdf-content .pdf-image {
+      width: 100%;
+      display: block;
+      margin: 12px 0;
+    }
+
+    .code-block {
+      background: #E6E6E6;
+      border: 1px solid #DDDDDD;
+      margin-bottom: 12px;
+    }
+
+    .code-block-heading {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 200%;
+      color: #292929;
+      padding: 6px 12px;
+    }
+
+    .code-block-content {
+      background: #F2F2F2;
+      padding: 12px;
+    }
+
+    .code-block-content pre {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 200%;
+      color: #454545;
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .page-footer {
+      height: 48px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    .page-footer img { height: 18px; }
+
+    /* ===== CLOSING PAGE ===== */
+    .closing-cover {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .closing-description {
+      background: #191919;
+      padding: 24px;
+      text-align: center;
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      color: #F2F2F2;
+      line-height: 1.8;
+    }
+
+    .closing-spacer {
+      flex: 1;
+    }
+
+    .closing-connect-section {
+      margin-bottom: 104px;
+    }
+
+    .closing-connect-label {
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: #454545;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 16px 0;
+      border-top: 1px solid #A9A9A9;
+      border-bottom: 1px solid #A9A9A9;
+    }
+
+    .closing-icons {
+      display: flex;
+      justify-content: center;
+    }
+
+    .closing-icon-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: -1px;
+    }
+
+    .closing-icon-box img {
+      display: block;
+      height: 48px;
+      width: auto;
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <img src="assets/logo-full-dark.svg" alt="Bluethroat Labs" class="topbar-logo">
+    <span class="topbar-title">Report Builder</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn" id="previewBtn">Preview</button>
+    <button class="btn btn-primary" id="exportBtn">Export PDF</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" data-tab="editor">Editor</button>
+  <button class="tab" data-tab="preview">Preview</button>
+</div>
+
+<!-- EDITOR -->
+<div class="editor-view" id="editorView">
+  <!-- Fixed H1 section -->
+  <div class="editor-h1-section">
+    <label>Report Title</label>
+    <input type="text" class="editor-h1-input" id="reportTitle" placeholder="Enter report title...">
+    <label>Severity</label>
+    <select class="severity-select" id="reportSeverity">
+      <option value="critical">Critical</option>
+      <option value="high">High</option>
+      <option value="medium">Medium</option>
+      <option value="low">Low</option>
+      <option value="informational">Informational</option>
+    </select>
+  </div>
+
+  <!-- Content blocks -->
+  <div class="blocks" id="blocksContainer"></div>
+
+  <!-- Empty state / add first block -->
+  <div style="padding: 16px 0; color: #444; font-size: 12px; cursor: text;" id="emptyPrompt">
+    Type <span style="color:#888">/</span> to add a block...
+  </div>
+</div>
+
+<!-- PREVIEW -->
+<div class="preview-view hidden" id="previewView"></div>
+
+<!-- SLASH MENU -->
+<div class="slash-menu" id="slashMenu">
+  <div class="slash-menu-item" data-type="h2">
+    <span class="slash-menu-item-icon">H</span>
+    <span class="slash-menu-item-label">Heading</span>
+    <span class="slash-menu-item-hint">H2</span>
+  </div>
+  <div class="slash-menu-item" data-type="h3">
+    <span class="slash-menu-item-icon">H3</span>
+    <span class="slash-menu-item-label">Subheading</span>
+    <span class="slash-menu-item-hint">H3</span>
+  </div>
+  <div class="slash-menu-item" data-type="text">
+    <span class="slash-menu-item-icon">T</span>
+    <span class="slash-menu-item-label">Text</span>
+    <span class="slash-menu-item-hint">Paragraph</span>
+  </div>
+  <div class="slash-menu-item" data-type="list">
+    <span class="slash-menu-item-icon">1.</span>
+    <span class="slash-menu-item-label">List Item</span>
+    <span class="slash-menu-item-hint">Numbered</span>
+  </div>
+  <div class="slash-menu-item" data-type="list-light">
+    <span class="slash-menu-item-icon">1.</span>
+    <span class="slash-menu-item-label">List Light</span>
+    <span class="slash-menu-item-hint">Regular</span>
+  </div>
+  <div class="slash-menu-item" data-type="list-text">
+    <span class="slash-menu-item-icon">T1</span>
+    <span class="slash-menu-item-label">List Text</span>
+    <span class="slash-menu-item-hint">Paragraph</span>
+  </div>
+  <div class="slash-menu-item" data-type="bullet">
+    <span class="slash-menu-item-icon">&bull;</span>
+    <span class="slash-menu-item-label">Bullet</span>
+    <span class="slash-menu-item-hint">Sub-item</span>
+  </div>
+  <div class="slash-menu-item" data-type="code">
+    <span class="slash-menu-item-icon">&lt;/&gt;</span>
+    <span class="slash-menu-item-label">Code Block</span>
+    <span class="slash-menu-item-hint">Code</span>
+  </div>
+  <div class="slash-menu-item" data-type="image">
+    <span class="slash-menu-item-icon">&#x1F5BC;</span>
+    <span class="slash-menu-item-label">Image</span>
+    <span class="slash-menu-item-hint">Upload</span>
+  </div>
+  <div class="slash-menu-item" data-type="space">
+    <span class="slash-menu-item-icon">&#x2195;</span>
+    <span class="slash-menu-item-label">Space</span>
+    <span class="slash-menu-item-hint">24px gap</span>
+  </div>
+</div>
+
+<script>
+  // ===== STATE =====
+  let blocks = [];
+  let slashMenuVisible = false;
+  let slashMenuTarget = null;
+  let selectedMenuIndex = 0;
+
+  const blocksContainer = document.getElementById('blocksContainer');
+  const slashMenu = document.getElementById('slashMenu');
+  const emptyPrompt = document.getElementById('emptyPrompt');
+  const editorView = document.getElementById('editorView');
+  const previewView = document.getElementById('previewView');
+
+  // ===== BLOCK MANAGEMENT =====
+  function createBlock(type, data = {}) {
+    const id = 'block-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+    const block = { id, type, value: data.value || '', lang: data.lang || '', imageData: data.imageData || null };
+    blocks.push(block);
+    renderBlocks();
+    // Focus the new block
+    setTimeout(() => {
+      const el = document.querySelector(`[data-block-id="${id}"] .block-input, [data-block-id="${id}"] textarea, [data-block-id="${id}"] .block-code-lang`);
+      if (el) el.focus();
+    }, 50);
+    return block;
+  }
+
+  function deleteBlock(id) {
+    blocks = blocks.filter(b => b.id !== id);
+    renderBlocks();
+  }
+
+  function updateBlock(id, field, value) {
+    const block = blocks.find(b => b.id === id);
+    if (block) block[field] = value;
+  }
+
+  function renderBlocks() {
+    blocksContainer.innerHTML = '';
+    emptyPrompt.style.display = blocks.length === 0 ? 'block' : 'none';
+
+    blocks.forEach((block, index) => {
+      const el = document.createElement('div');
+      el.className = 'block';
+      el.dataset.blockId = block.id;
+
+      const handle = document.createElement('div');
+      handle.className = 'block-handle';
+      handle.textContent = '⋮';
+
+      const content = document.createElement('div');
+      content.className = 'block-content';
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'block-delete';
+      deleteBtn.textContent = '×';
+      deleteBtn.onclick = () => deleteBlock(block.id);
+
+      // Helper: add new text block after current block
+      function addBlockAfter(currentId) {
+        const newId = 'block-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+        const newBlock = { id: newId, type: 'text', value: '', lang: '', imageData: null };
+        const idx = blocks.findIndex(b => b.id === currentId);
+        blocks.splice(idx + 1, 0, newBlock);
+        renderBlocks();
+        setTimeout(() => {
+          const el = document.querySelector(`[data-block-id="${newId}"] .block-input`);
+          if (el) el.focus();
+        }, 50);
+      }
+
+      if (block.type === 'code') {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'block-code-wrapper';
+
+        const langInput = document.createElement('input');
+        langInput.className = 'block-code-lang';
+        langInput.placeholder = 'Language (e.g. bash, rust)';
+        langInput.value = block.lang;
+        langInput.oninput = () => updateBlock(block.id, 'lang', langInput.value);
+
+        const codeArea = document.createElement('textarea');
+        codeArea.className = 'block-code-textarea';
+        codeArea.placeholder = 'Paste code here...';
+        codeArea.value = block.value;
+        codeArea.oninput = () => {
+          updateBlock(block.id, 'value', codeArea.value);
+          autoResize(codeArea);
+        };
+        setTimeout(() => autoResize(codeArea), 10);
+
+        wrapper.appendChild(langInput);
+        wrapper.appendChild(codeArea);
+        content.appendChild(wrapper);
+
+        // Add "+" button below code block
+        const addBtn = document.createElement('div');
+        addBtn.style.cssText = 'font-size:11px;color:#555;margin-top:6px;cursor:pointer;padding:4px 0;';
+        addBtn.textContent = '+ Add block below';
+        addBtn.onclick = () => { addBlockAfter(block.id); };
+
+        // Tab key in code textarea also creates new block below
+        codeArea.onkeydown = (e) => {
+          if (e.key === 'Tab' && !e.shiftKey) {
+            e.preventDefault();
+            addBlockAfter(block.id);
+          }
+        };
+
+        content.appendChild(addBtn);
+      } else if (block.type === 'image') {
+        if (block.imageData) {
+          const img = document.createElement('img');
+          img.src = block.imageData;
+          img.className = 'block-image-preview';
+          content.appendChild(img);
+
+          const changeBtn = document.createElement('div');
+          changeBtn.style.cssText = 'font-size:10px;color:#666;margin-top:4px;cursor:pointer;';
+          changeBtn.textContent = 'Click to change image';
+          changeBtn.onclick = () => pickImage(block.id);
+          content.appendChild(changeBtn);
+        } else {
+          const upload = document.createElement('div');
+          upload.className = 'block-image-upload';
+          upload.textContent = 'Click to upload image';
+          upload.onclick = () => pickImage(block.id);
+          content.appendChild(upload);
+        }
+
+        // Add "+" button below image block
+        const addBtn = document.createElement('div');
+        addBtn.style.cssText = 'font-size:11px;color:#555;margin-top:6px;cursor:pointer;padding:4px 0;';
+        addBtn.textContent = '+ Add block below';
+        addBtn.onclick = () => { addBlockAfter(block.id); };
+        content.appendChild(addBtn);
+      } else if (block.type === 'space') {
+        const spacer = document.createElement('div');
+        spacer.style.cssText = 'height:24px;border:1px dashed #2E2E2E;display:flex;align-items:center;justify-content:center;color:#444;font-size:10px;';
+        spacer.textContent = '— spacer (24px) —';
+        content.appendChild(spacer);
+
+        // Add "+" button below spacer
+        const addBtn = document.createElement('div');
+        addBtn.style.cssText = 'font-size:11px;color:#555;margin-top:6px;cursor:pointer;padding:4px 0;';
+        addBtn.textContent = '+ Add block below';
+        addBtn.onclick = () => { addBlockAfter(block.id); };
+        content.appendChild(addBtn);
+      } else {
+        const label = document.createElement('div');
+        label.className = 'block-type-label';
+        label.textContent = block.type.toUpperCase();
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'block-input';
+        textarea.dataset.type = block.type;
+        textarea.placeholder = getPlaceholder(block.type);
+        textarea.value = block.value;
+        textarea.rows = 1;
+
+        textarea.oninput = (e) => {
+          updateBlock(block.id, 'value', textarea.value);
+          autoResize(textarea);
+          handleSlashInput(e, textarea, block.id);
+        };
+
+        textarea.onkeydown = (e) => {
+          if (slashMenuVisible) {
+            handleSlashKeydown(e);
+          } else if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            // Create a new block of same type after this one
+            const newBlock = { id: 'block-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5), type: block.type, value: '', lang: '', imageData: null };
+            const idx = blocks.findIndex(b => b.id === block.id);
+            blocks.splice(idx + 1, 0, newBlock);
+            renderBlocks();
+            setTimeout(() => {
+              const el = document.querySelector(`[data-block-id="${newBlock.id}"] .block-input`);
+              if (el) el.focus();
+            }, 50);
+          } else if (e.key === 'Backspace' && textarea.value === '') {
+            e.preventDefault();
+            const idx = blocks.findIndex(b => b.id === block.id);
+            deleteBlock(block.id);
+            if (idx > 0) {
+              setTimeout(() => {
+                const prevBlock = blocksContainer.children[idx - 1];
+                if (prevBlock) {
+                  const input = prevBlock.querySelector('.block-input, textarea');
+                  if (input) input.focus();
+                }
+              }, 50);
+            }
+          }
+        };
+
+        content.appendChild(label);
+        content.appendChild(textarea);
+        setTimeout(() => autoResize(textarea), 10);
+      }
+
+      el.appendChild(handle);
+      el.appendChild(content);
+      el.appendChild(deleteBtn);
+      blocksContainer.appendChild(el);
+    });
+  }
+
+  function getPlaceholder(type) {
+    switch(type) {
+      case 'h2': return 'Section heading...';
+      case 'h3': return 'Subheading...';
+      case 'text': return 'Write something...';
+      case 'list': return 'List item (bold)...';
+      case 'list-light': return 'List item (regular)...';
+      case 'list-text': return 'Text under list (preserves numbering)...';
+      case 'bullet': return '• Sub-bullet / file reference...';
+      default: return 'Type here...';
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  function pickImage(blockId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        updateBlock(blockId, 'imageData', ev.target.result);
+        renderBlocks();
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
+  // ===== SLASH MENU =====
+  function handleSlashInput(e, textarea, blockId) {
+    const val = textarea.value.trim();
+    if (val.startsWith('/')) {
+      const query = val.slice(1).toLowerCase();
+      showSlashMenu(textarea, blockId, query);
+    } else {
+      hideSlashMenu();
+    }
+  }
+
+  function showSlashMenu(textarea, blockId, query = '') {
+    const rect = textarea.getBoundingClientRect();
+    slashMenu.style.left = rect.left + 'px';
+    slashMenu.style.top = (rect.bottom + 4) + 'px';
+
+    // Filter items by query
+    const items = slashMenu.querySelectorAll('.slash-menu-item');
+    let visibleCount = 0;
+    items.forEach(item => {
+      const label = item.querySelector('.slash-menu-item-label').textContent.toLowerCase();
+      const hint = item.querySelector('.slash-menu-item-hint').textContent.toLowerCase();
+      const type = item.dataset.type.toLowerCase();
+      const matches = !query || label.includes(query) || hint.includes(query) || type.includes(query);
+      item.style.display = matches ? 'flex' : 'none';
+      if (matches) visibleCount++;
+    });
+
+    if (visibleCount === 0) {
+      hideSlashMenu();
+      return;
+    }
+
+    slashMenu.classList.add('visible');
+    slashMenuVisible = true;
+    slashMenuTarget = blockId;
+    selectedMenuIndex = 0;
+
+    // Check if menu fits below, otherwise open upward
+    const menuHeight = visibleCount * 36;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    if (spaceBelow < menuHeight + 8) {
+      slashMenu.style.top = (rect.top - menuHeight - 4) + 'px';
+    }
+
+    updateMenuSelection();
+  }
+
+  function hideSlashMenu() {
+    slashMenu.classList.remove('visible');
+    slashMenuVisible = false;
+    slashMenuTarget = null;
+  }
+
+  function getVisibleMenuItems() {
+    return Array.from(slashMenu.querySelectorAll('.slash-menu-item')).filter(item => item.style.display !== 'none');
+  }
+
+  function updateMenuSelection() {
+    const visible = getVisibleMenuItems();
+    slashMenu.querySelectorAll('.slash-menu-item').forEach(item => item.classList.remove('selected'));
+    if (visible[selectedMenuIndex]) visible[selectedMenuIndex].classList.add('selected');
+  }
+
+  function handleSlashKeydown(e) {
+    const visible = getVisibleMenuItems();
+    if (visible.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedMenuIndex = (selectedMenuIndex + 1) % visible.length;
+      updateMenuSelection();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedMenuIndex = (selectedMenuIndex - 1 + visible.length) % visible.length;
+      updateMenuSelection();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const type = visible[selectedMenuIndex]?.dataset.type;
+      if (type) selectSlashMenuItem(type);
+    } else if (e.key === 'Escape') {
+      hideSlashMenu();
+    }
+  }
+
+  function selectSlashMenuItem(type) {
+    const targetId = slashMenuTarget;
+    hideSlashMenu();
+
+    if (targetId) {
+      const block = blocks.find(b => b.id === targetId);
+      if (block) {
+        // Replace the current block's type and clear its value
+        block.type = type;
+        block.value = '';
+        block.lang = '';
+        block.imageData = null;
+      }
+    } else {
+      createBlock(type);
+      return; // createBlock handles rendering and focus
+    }
+
+    renderBlocks();
+    setTimeout(() => {
+      const el = document.querySelector(`[data-block-id="${targetId}"] .block-input, [data-block-id="${targetId}"] .block-code-lang`);
+      if (el) el.focus();
+    }, 50);
+  }
+
+  // Click on slash menu items
+  slashMenu.querySelectorAll('.slash-menu-item').forEach(item => {
+    item.onmousedown = (e) => {
+      e.preventDefault();
+      selectSlashMenuItem(item.dataset.type);
+    };
+  });
+
+  // Empty prompt click
+  emptyPrompt.onclick = () => {
+    createBlock('text');
+  };
+
+  // Global keydown for slash in empty state
+  document.addEventListener('keydown', (e) => {
+    if (e.target.closest('.editor-h1-section')) return;
+    if (e.key === '/' && blocks.length === 0) {
+      createBlock('text', { value: '/' });
+      setTimeout(() => {
+        const textarea = blocksContainer.querySelector('.block-input');
+        if (textarea) {
+          textarea.focus();
+          showSlashMenu(textarea, blocks[0].id);
+        }
+      }, 50);
+    }
+  });
+
+  // ===== TAB SWITCHING =====
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.tab;
+      if (target === 'editor') {
+        editorView.classList.remove('hidden');
+        previewView.classList.add('hidden');
+      } else {
+        editorView.classList.add('hidden');
+        previewView.classList.remove('hidden');
+        generatePreview();
+      }
+    };
+  });
+
+  document.getElementById('previewBtn').onclick = () => {
+    document.querySelector('[data-tab="preview"]').click();
+  };
+
+  // ===== PREVIEW GENERATION =====
+  function generatePreview() {
+    const title = document.getElementById('reportTitle').value || 'Untitled Report';
+    const severity = document.getElementById('reportSeverity').value;
+
+    // Convert blocks to individual HTML elements for pagination
+    const elements = [];
+    let listCounter = 0;
+
+    blocks.forEach((block, i) => {
+      switch (block.type) {
+        case 'h2':
+          listCounter = 0;
+          elements.push(`<h2>${escapeHtml(block.value)}</h2>`);
+          break;
+        case 'h3':
+          elements.push(`<h3>${escapeHtml(block.value)}</h3>`);
+          break;
+        case 'text':
+          listCounter = 0;
+          elements.push(`<p>${escapeHtml(block.value)}</p>`);
+          break;
+        case 'list':
+          listCounter++;
+          elements.push(`<div class="list-group"><div class="list-item"><span class="list-num">${listCounter}. </span>${escapeHtml(block.value)}</div></div>`);
+          break;
+        case 'list-light':
+          listCounter++;
+          elements.push(`<div class="list-group"><div class="list-item-light"><span class="list-num">${listCounter}. </span>${escapeHtml(block.value)}</div></div>`);
+          break;
+        case 'list-text':
+          // Looks like a paragraph but doesn't reset the list counter
+          elements.push(`<p>${escapeHtml(block.value)}</p>`);
+          break;
+        case 'bullet':
+          elements.push(`<div class="bullet-item"><span class="bullet-dot">&bull; </span>${escapeHtml(block.value)}</div>`);
+          break;
+        case 'code':
+          elements.push(`<div class="code-block"><div class="code-block-heading">${escapeHtml(block.lang)}</div><div class="code-block-content"><pre>${escapeHtml(block.value)}</pre></div></div>`);
+          break;
+        case 'image':
+          if (block.imageData) {
+            elements.push(`<img class="pdf-image" src="${block.imageData}">`);
+          }
+          break;
+        case 'space':
+          elements.push(`<div style="height:24px"></div>`);
+          break;
+      }
+    });
+
+    const severityColors = {
+      critical: '#C00000', high: '#FF4747', medium: '#D36300', low: '#C59100', informational: '#0089D3'
+    };
+
+    // First render everything into a single hidden page to measure
+    // Then paginate based on actual rendered heights
+    const allContentHtml = elements.join('');
+
+    // Create page 1 with cover
+    previewView.innerHTML = `
+      <div class="page" id="measurePage">
+        <div class="grid-line-left"></div>
+        <div class="grid-line-right"></div>
+        <div class="grid-line-top"></div>
+        <div class="grid-line-bottom"></div>
+        <div class="page-number">01</div>
+        <div class="page-border">
+          <div class="cover-section">
+            <img class="cover-image" src="assets/report-cover.png" alt="Cover">
+            <div class="cover-accent" style="background:${severityColors[severity] || '#C00000'}"></div>
+            <div class="cover-overlay">
+              <h1 class="cover-title">${escapeHtml(title)}</h1>
+              <div class="cover-severity">Severity: <span style="color:#F2F2F2">${capitalize(severity)}</span></div>
+            </div>
+          </div>
+          <div class="pdf-content">${allContentHtml}</div>
+        </div>
+        <div class="page-footer">
+          <img src="assets/logo-full-dark.svg" alt="Bluethroat Labs">
+        </div>
+      </div>
+    `;
+
+    // Wait for images to load then paginate
+    setTimeout(() => paginate(title, severity, severityColors, elements), 200);
+  }
+
+  function paginate(title, severity, severityColors, elements) {
+    const coverEl = document.querySelector('#measurePage .cover-section');
+    const coverHeight = coverEl ? coverEl.offsetHeight : 0;
+    const maxContentHeight = 842 - 48 - 8 - 48 - 64; // ~674px for text pages
+    const maxPage1Content = maxContentHeight - coverHeight;
+
+    // Measure each element's height
+    const contentEl = document.querySelector('#measurePage .pdf-content');
+    const children = contentEl.children;
+    const heights = [];
+    for (let i = 0; i < children.length; i++) {
+      heights.push(children[i].offsetHeight + 12);
+    }
+
+    // Split code blocks that are too tall into multiple chunks
+    function splitCodeBlock(html, availableHeight, fullMaxHeight) {
+      const langMatch = html.match(/<div class="code-block-heading">(.*?)<\/div>/);
+      const codeMatch = html.match(/<pre>([\s\S]*?)<\/pre>/);
+      if (!codeMatch) return [html];
+
+      const lang = langMatch ? langMatch[1] : '';
+      const code = codeMatch[1];
+      const lines = code.split('\n');
+      const lineHeight = 20;
+      const charWidth = 7.5; // approx char width at 10px Geist Mono
+      const codeContentWidth = 595 - 48 - 48 - 32 - 32 - 24; // page - borders - content padding - code padding
+      const headingOverhead = 44;
+      const paddingOverhead = 24;
+
+      // Estimate visual height of a line accounting for wrapping
+      function estimateLineHeight(line) {
+        const textWidth = line.length * charWidth;
+        const wrappedLines = Math.max(1, Math.ceil(textWidth / codeContentWidth));
+        return wrappedLines * lineHeight;
+      }
+
+      const chunks = [];
+      let currentLines = [];
+      let currentH = headingOverhead;
+      let maxH = availableHeight;
+
+      for (let i = 0; i < lines.length; i++) {
+        const lh = estimateLineHeight(lines[i]);
+        if (currentH + lh > maxH && currentLines.length > 0) {
+          chunks.push(currentLines.join('\n'));
+          currentLines = [];
+          currentH = paddingOverhead;
+          maxH = fullMaxHeight;
+        }
+        currentLines.push(lines[i]);
+        currentH += lh;
+      }
+      if (currentLines.length > 0) chunks.push(currentLines.join('\n'));
+
+      return chunks.map((chunk, idx) => {
+        if (idx === 0) {
+          return `<div class="code-block"><div class="code-block-heading">${lang}</div><div class="code-block-content"><pre>${chunk}</pre></div></div>`;
+        } else {
+          return `<div class="code-block"><div class="code-block-content"><pre>${chunk}</pre></div></div>`;
+        }
+      });
+    }
+
+    // Distribute elements across pages, splitting code blocks if needed
+    const pages = [];
+    let currentPage = { elements: [], isFirst: true };
+    let currentHeight = 0;
+    let maxHeight = maxPage1Content;
+
+    for (let i = 0; i < elements.length; i++) {
+      const h = heights[i] || 30;
+      const isCodeBlock = elements[i].startsWith('<div class="code-block">');
+
+      if (isCodeBlock && h > maxHeight - currentHeight) {
+        const availableForFirst = maxHeight - currentHeight;
+
+        // If less than ~70px available (barely fits heading + 1 line), push whole block to next page
+        if (availableForFirst < 70) {
+          if (currentPage.elements.length > 0) pages.push(currentPage);
+          currentPage = { elements: [], isFirst: false };
+          currentHeight = 0;
+          maxHeight = maxContentHeight;
+        }
+
+        const chunks = splitCodeBlock(elements[i], maxHeight - currentHeight, maxContentHeight);
+
+        for (let c = 0; c < chunks.length; c++) {
+          if (c > 0) {
+            if (currentPage.elements.length > 0) pages.push(currentPage);
+            currentPage = { elements: [], isFirst: false };
+            currentHeight = 0;
+            maxHeight = maxContentHeight;
+          }
+          currentPage.elements.push(chunks[c]);
+          // Estimate chunk height with wrapping
+          const chunkCodeMatch = chunks[c].match(/<pre>([\s\S]*?)<\/pre>/);
+          let chunkH = c === 0 ? 44 : 24;
+          if (chunkCodeMatch) {
+            const chunkLines = chunkCodeMatch[1].split('\n');
+            const charW = 7.5;
+            const codeW = 595 - 48 - 48 - 32 - 32 - 24;
+            chunkLines.forEach(l => { chunkH += Math.max(1, Math.ceil(l.length * charW / codeW)) * 20; });
+          }
+          currentHeight += chunkH;
+        }
+      } else if (currentHeight + h > maxHeight && currentPage.elements.length > 0) {
+        pages.push(currentPage);
+        currentPage = { elements: [], isFirst: false };
+        currentHeight = 0;
+        maxHeight = maxContentHeight;
+        currentPage.elements.push(elements[i]);
+        currentHeight += h;
+      } else {
+        currentPage.elements.push(elements[i]);
+        currentHeight += h;
+      }
+    }
+    if (currentPage.elements.length > 0) pages.push(currentPage);
+    if (pages.length === 0) pages.push({ elements: [], isFirst: true });
+
+    // Render all pages
+    let html = '';
+    pages.forEach((page, idx) => {
+      const pageNum = String(idx + 1).padStart(2, '0');
+      const contentHtml = page.elements.join('');
+
+      html += `<div class="page">
+        <div class="grid-line-left"></div>
+        <div class="grid-line-right"></div>
+        <div class="grid-line-top"></div>
+        <div class="grid-line-bottom"></div>
+        <div class="page-number">${pageNum}</div>
+        <div class="page-border">`;
+
+      if (page.isFirst) {
+        html += `<div class="cover-section">
+            <img class="cover-image" src="assets/report-cover.png" alt="Cover">
+            <div class="cover-accent" style="background:${severityColors[severity] || '#C00000'}"></div>
+            <div class="cover-overlay">
+              <h1 class="cover-title">${escapeHtml(title)}</h1>
+              <div class="cover-severity">Severity: <span style="color:#F2F2F2">${capitalize(severity)}</span></div>
+            </div>
+          </div>`;
+      }
+
+      html += `<div class="pdf-content">${contentHtml}</div>
+        </div>
+        <div class="page-footer">
+          <img src="assets/logo-full-dark.svg" alt="Bluethroat Labs">
+        </div>
+      </div>`;
+    });
+
+    // Append closing page
+    const closingPageNum = String(pages.length + 1).padStart(2, '0');
+    html += `<div class="page">
+      <div class="grid-line-left"></div>
+      <div class="grid-line-right"></div>
+      <div class="grid-line-top"></div>
+      <div class="grid-line-bottom"></div>
+      <div class="page-number">${closingPageNum}</div>
+      <div class="page-border" style="display:flex;flex-direction:column;">
+        <img class="closing-cover" src="assets/closing-cover.png" alt="Bluethroat Labs">
+        <div class="closing-description">We build domain-specific AI security agents for complex protocol architectures. One agent per domain. All of them sharing intelligence to stop cascading failures.</div>
+        <div class="closing-spacer"></div>
+        <div class="closing-connect-section">
+          <div class="closing-connect-label">CONNECT WITH US</div>
+          <div class="closing-icons">
+            <a class="closing-icon-box" href="https://bluethroatlabs.com/" target="_blank"><img src="assets/Web.svg" alt="Web"></a>
+            <a class="closing-icon-box" href="https://bluethroatlabs.com/docs/executive-summary" target="_blank"><img src="assets/Docs.svg" alt="Docs"></a>
+            <a class="closing-icon-box" href="mailto:saxenism@bluethroatlabs.com"><img src="assets/mail.svg" alt="Mail"></a>
+            <a class="closing-icon-box" href="https://zcal.co/bluethroat-labs/30min" target="_blank"><img src="assets/Contact.svg" alt="Contact"></a>
+            <a class="closing-icon-box" href="https://x.com/bluethroat_labs" target="_blank"><img src="assets/Twitter.svg" alt="Twitter"></a>
+            <a class="closing-icon-box" href="https://www.linkedin.com/company/bluethroat-labs" target="_blank"><img src="assets/Linkedin.svg" alt="LinkedIn"></a>
+          </div>
+        </div>
+      </div>
+      <div class="page-footer">
+        <img src="assets/logo-full-dark.svg" alt="Bluethroat Labs">
+      </div>
+    </div>`;
+
+    previewView.innerHTML = html;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  // ===== EXPORT =====
+  document.getElementById('exportBtn').onclick = async () => {
+    // Make sure preview view is visible so generatePreview works
+    editorView.classList.add('hidden');
+    previewView.classList.remove('hidden');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('[data-tab="preview"]').classList.add('active');
+
+    // Generate preview and wait for pagination to complete
+    generatePreview();
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Convert all images to base64 data URIs so the server doesn't need file access
+    async function inlineImagesClient(container) {
+      const imgs = container.querySelectorAll('img');
+      for (const img of imgs) {
+        if (img.src.startsWith('data:')) continue;
+        try {
+          const resp = await fetch(img.src);
+          const blob = await resp.blob();
+          const dataUrl = await new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+          img.src = dataUrl;
+        } catch(e) { /* skip if fetch fails */ }
+      }
+    }
+
+    await inlineImagesClient(previewView);
+
+    const previewHtml = previewView.innerHTML;
+    const styleEl = document.querySelector('style');
+    const css = styleEl ? styleEl.textContent : '';
+
+    try {
+      // Send HTML + CSS directly to export
+      const res = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewHtml: previewHtml,
+          previewCss: css
+        })
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'report.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const errText = await res.text();
+        alert('Export failed: ' + errText);
+      }
+    } catch(e) {
+      alert('Export failed. Make sure to run: node server.js');
+    }
+  };
+</script>
+
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Preview</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+      padding: 40px;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    /* A4 page */
+    .page {
+      width: 595px;
+      height: 842px;
+      background: #FAFAFA;
+      position: relative;
+      padding: 48px;
+      padding-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page-border {
+      flex: 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* 4 grid lines overlaid on the page */
+    .grid-line-left,
+    .grid-line-right,
+    .grid-line-top,
+    .grid-line-bottom {
+      position: absolute;
+      background: #A9A9A9;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .grid-line-left {
+      left: 48px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+    }
+
+    .grid-line-right {
+      right: 48px;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+    }
+
+    .grid-line-top {
+      top: 48px;
+      left: 0;
+      right: 0;
+      height: 1px;
+    }
+
+    .grid-line-bottom {
+      bottom: 48px;
+      left: 0;
+      right: 0;
+      height: 1px;
+    }
+
+    /* Page number */
+    .page-number {
+      position: absolute;
+      top: 8px;
+      right: 16px;
+      font-family: 'Instrument Serif', serif;
+      font-size: 24px;
+      line-height: 32px;
+      color: #191919;
+      z-index: 5;
+    }
+
+    /* Cover image section */
+    .cover-section {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .cover-image {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .cover-accent {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
+      height: 100%;
+      background: #C00000;
+    }
+
+    .cover-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 6px;
+      padding: 24px 28px;
+    }
+
+    .cover-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: #F2F2F2;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .cover-severity {
+      font-family: 'Geist Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: #F2F2F2;
+    }
+
+    .severity-value.critical { color: #F2F2F2; }
+    .severity-value.high { color: #FF4747; }
+    .severity-value.medium { color: #D36300; }
+    .severity-value.low { color: #C59100; }
+    .severity-value.informational { color: #0089D3; }
+
+    /* Content area */
+    .content {
+      padding: 32px;
+      flex: 1;
+      overflow: hidden;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .content h2 {
+      font-family: 'Geist Mono', monospace;
+      font-size: 18px;
+      font-weight: 600;
+      color: #191919;
+      margin-top: 28px;
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+
+    .content h2:first-child {
+      margin-top: 0;
+    }
+
+    .content p {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: #454545;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+
+    .content code {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      background: none;
+    }
+
+    .content ol {
+      list-style: none;
+      counter-reset: item;
+      padding-left: 0;
+      margin-bottom: 8px;
+    }
+
+    .content ol > li {
+      font-family: 'Geist Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #191919;
+      line-height: 1.8;
+      margin-bottom: 4px;
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .content ol > li::before {
+      content: counter(item) ". ";
+      counter-increment: item;
+      position: absolute;
+      left: 0;
+    }
+
+    .content ol > li ul,
+    .content ul {
+      list-style: none;
+      padding-left: 8px;
+      margin-top: 2px;
+      margin-bottom: 8px;
+    }
+
+    .content ol > li ul li,
+    .content ul li {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: #454545;
+      line-height: 1.7;
+      position: relative;
+      padding-left: 12px;
+    }
+
+    .content ol > li ul li::before,
+    .content ul li::before {
+      content: "\2022";
+      position: absolute;
+      left: 0;
+      color: #454545;
+    }
+
+    /* Code block */
+    .code-block {
+      background: #E6E6E6;
+      border: 1px solid #DDDDDD;
+      margin-bottom: 12px;
+    }
+
+    .code-block-heading {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 200%;
+      color: #292929;
+      padding: 6px 12px;
+    }
+
+    .code-block-content {
+      background: #F2F2F2;
+      padding: 12px;
+    }
+
+    .code-block-content pre {
+      font-family: 'Geist Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 200%;
+      color: #454545;
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    /* Footer - below the border box */
+    .footer {
+      height: 48px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    .footer img {
+      height: 18px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Grid lines -->
+  <div class="grid-line-left"></div>
+  <div class="grid-line-right"></div>
+  <div class="grid-line-top"></div>
+  <div class="grid-line-bottom"></div>
+
+  <!-- Page number -->
+  <div class="page-number">01</div>
+
+  <div class="page-border">
+    <!-- Cover image -->
+    <div class="cover-section">
+      <img class="cover-image" src="assets/report-cover.png" alt="Cover">
+      <div class="cover-accent"></div>
+      <div class="cover-overlay">
+        <h1 class="cover-title">Fail-open WAL Runtime Handling Allows Post-Crash Equivocation</h1>
+        <div class="cover-severity">
+          Severity: <span class="severity-value critical">Critical</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <h2>Summary</h2>
+
+      <p>Malachite's runtime WAL path is fail-open. <code>`wal_append`</code> and <code>`wal_flush`</code> log errors but still return success, so consensus continues to publish signed messages and process decisions without durable persistence.</p>
+
+      <p>If the node crashes after publishing a vote/proposal that was not durably written, restart replay can rebuild an incomplete state and the validator can sign a conflicting vote at the same <code>`height/round`</code> (equivocation).</p>
+
+      <h2>Primary Vulnerability (Exploitable)</h2>
+
+      <ol>
+        <li>Runtime WAL operations swallow errors and return <code>`Ok(())`</code>
+          <ul>
+            <li><code>`malachite/code/crates/engine/src/consensus.rs:973`</code> (<code>`wal_append`</code>)</li>
+            <li><code>`malachite/code/crates/engine/src/consensus.rs:1000`</code> (<code>`wal_flush`</code>)</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Footer below border -->
+  <div class="footer">
+    <img src="assets/logo-full-dark.svg" alt="Bluethroat Labs">
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page">
+  <!-- Grid lines -->
+  <div class="grid-line-left"></div>
+  <div class="grid-line-right"></div>
+  <div class="grid-line-top"></div>
+  <div class="grid-line-bottom"></div>
+
+  <!-- Page number -->
+  <div class="page-number">02</div>
+
+  <div class="page-border">
+    <!-- Content only, no cover -->
+    <div class="content">
+      <p>The codebase already has a fail-closed safety mechanism for WAL failures, but only on startup paths.</p>
+      <ul>
+        <li><code>`malachite/code/crates/engine/src/consensus.rs:1543`</code> (<code>`hang_on_failure`</code>)</li>
+        <li><code>`malachite/code/crates/engine/src/consensus.rs:398`</code> (<code>`wal_fetch`</code> guarded)</li>
+        <li><code>`malachite/code/crates/engine/src/consensus.rs:436`</code> (<code>`wal_replay`</code> guarded)</li>
+      </ul>
+      <p>Runtime append/flush are the inconsistency: same safety domain, weaker policy.</p>
+
+      <h2>Why Replay Does Not Help Comprehensively</h2>
+
+      <ol>
+        <li>Lock state is not persisted directly; it is reconstructed from replayed events.
+          <ul>
+            <li><code>`malachite/code/crates/core-state-machine/src/state.rs:66`</code></li>
+            <li><code>`malachite/code/crates/core-state-machine/src/state.rs:69`</code></li>
+          </ul>
+        </li>
+        <li>WAL entries contain messages/timeouts/proposed values, not lock snapshots.
+          <ul>
+            <li><code>`malachite/code/crates/core-consensus/src/types.rs:93`</code></li>
+          </ul>
+        </li>
+        <li>If polka-forming votes were not durably appended, replay cannot re-establish prior lock constraints.</li>
+        <li>Driver-side in-memory duplicate-vote guards are also volatile across crash/restart.
+          <ul>
+            <li><code>`malachite/code/crates/core-driver/src/driver.rs:65`</code></li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <img src="assets/logo-full-dark.svg" alt="Bluethroat Labs">
+  </div>
+</div>
+
+<!-- PAGE 3 - Code block test -->
+<div class="page">
+  <!-- Grid lines -->
+  <div class="grid-line-left"></div>
+  <div class="grid-line-right"></div>
+  <div class="grid-line-top"></div>
+  <div class="grid-line-bottom"></div>
+
+  <!-- Page number -->
+  <div class="page-number">03</div>
+
+  <div class="page-border">
+    <div class="content">
+      <ol>
+        <li>From the repository root (the directory that contains <code>`code/`</code>), apply this exact PoC patch:</li>
+      </ol>
+
+      <div class="code-block">
+        <div class="code-block-heading">bash</div>
+        <div class="code-block-content">
+<pre>git apply &lt;&lt;'PATCH'
+diff --git a/code/crates/engine/src/wal/thread.rs b/code/crates/engine/src/wal/thread.rs
+index 1157dbf7..73b742b6 100644
+--- a/code/crates/engine/src/wal/thread.rs
++++ b/code/crates/engine/src/wal/thread.rs
+@@ -113,17 +113,24 @@ where
+            let entry_type = wal_entry_type(&amp;entry);
+
+            let mut buf = Vec::new();
++           let fail_append =
+std::env::var_os("MALACHITE_TEST_FAIL_WAL_APPEND").is_some();
+
+            // Capture encoding result and always send a reply to prevent deadlock</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <img src="assets/logo-full-dark.svg" alt="Bluethroat Labs">
+  </div>
+</div>
+
+</body>
+</html>
