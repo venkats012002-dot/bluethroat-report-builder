@@ -45,9 +45,9 @@ module.exports = async (req, res) => {
       margin: { top: 0, right: 0, bottom: 0, left: 0 }
     });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=report.pdf');
-    res.end(Buffer.from(pdf));
+    // Send as base64 JSON to avoid binary encoding issues on serverless
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ pdf: Buffer.from(pdf).toString('base64') });
   } catch (err) {
     console.error('PDF export error:', err);
     res.status(500).send('PDF export failed: ' + err.message);

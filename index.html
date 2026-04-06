@@ -1529,7 +1529,11 @@
         })
       });
       if (res.ok) {
-        const blob = await res.blob();
+        const data = await res.json();
+        const byteChars = atob(data.pdf);
+        const byteArray = new Uint8Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
